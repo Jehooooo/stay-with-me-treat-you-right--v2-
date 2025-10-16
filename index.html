@@ -33,115 +33,255 @@
       background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;font-weight:700;font-size:22px;}
     h1{margin:0;font-size:20px}
     p.lead{margin:0;color:rgba(43,11,58,0.8);font-size:14px}
+    .status{margin-top:8px;padding:8px 12px;border-radius:8px;font-size:12px;text-align:center;font-weight:600}
+    .status.offline{background:rgba(255,119,209,0.2);color:#d63384}
+    .status.online{background:rgba(40,167,69,0.2);color:#28a745}
+    .status.connecting{background:rgba(255,193,7,0.2);color:#ffc107}
     .list{margin-top:18px;display:grid;gap:12px}
     .item{display:flex;gap:14px;padding:14px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.45));align-items:flex-start;box-shadow: 0 6px 18px rgba(43,11,58,0.04);position:relative}
     .emoji{width:56px;height:56px;border-radius:10px;display:inline-grid;place-items:center;font-size:26px;background:linear-gradient(135deg, rgba(255,119,209,0.14), rgba(123,92,255,0.10));border:1px solid rgba(255,255,255,0.6)}
     .content h3{margin:0;font-size:16px}
     .content p{margin:6px 0 0 0;color:rgba(43,11,58,0.8);line-height:1.45;font-size:14px}
     .item:hover{transform:translateY(-6px);transition:transform .24s ease;box-shadow:0 18px 40px rgba(123,92,255,0.10)}
-    .edit-btn, .delete-btn{position:absolute;top:8px;right:8px;border:none;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer;color:#fff;font-weight:600}
-    .edit-btn{background:var(--purple);right:65px}
-    .delete-btn{background:var(--pink)}
+    .delete-btn{position:absolute;top:8px;right:8px;border:none;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer;color:#fff;font-weight:600;background:var(--pink)}
     .add-form{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap}
     input, textarea{flex:1;padding:10px;border-radius:10px;border:1px solid #ddd;font-family:inherit;font-size:14px}
     button{background:linear-gradient(90deg,var(--pink),var(--purple));color:white;padding:10px 18px;border:none;border-radius:10px;font-weight:600;cursor:pointer;transition:opacity .2s}
     button:hover{opacity:0.85}
+    button:disabled{opacity:0.5;cursor:not-allowed}
+    .setup-guide{background:rgba(255,193,7,0.1);border:2px solid #ffc107;border-radius:12px;padding:20px;margin-bottom:20px}
+    .setup-guide h2{margin:0 0 12px 0;font-size:18px;color:#d39e00}
+    .setup-guide ol{margin:8px 0;padding-left:20px}
+    .setup-guide li{margin:8px 0;line-height:1.6}
+    .setup-guide code{background:rgba(0,0,0,0.05);padding:2px 6px;border-radius:4px;font-size:13px}
+    .setup-guide a{color:var(--purple);font-weight:600}
   </style>
 </head>
 <body>
   <div class="wrapper" role="main">
     <header>
       <div class="logo">💜</div>
-      <div>
+      <div style="flex:1">
         <h1>Listahan Date with Trendy</h1>
         <p class="lead">A cozy list of plans, sweet and playful. Pick all you want and make memories ✨</p>
+        <div class="status connecting" id="statusBar">🔄 Connecting to Firebase...</div>
       </div>
     </header>
 
-    <section class="list" id="dateList"></section>
+    <section class="list" id="dateList">
+      <div style="text-align:center;padding:40px;color:rgba(43,11,58,0.5)">
+        <p>Loading ideas...</p>
+      </div>
+    </section>
 
     <div class="add-form">
       <input type="text" id="emojiInput" placeholder="Emoji (e.g. 💖)" maxlength="4">
       <input type="text" id="titleInput" placeholder="Title">
       <textarea id="descInput" rows="2" placeholder="Description..."></textarea>
-      <button id="addBtn">Add to List</button>
+      <button id="addBtn" disabled>Add to List</button>
     </div>
   </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-database-compat.min.js"></script>
+
   <script>
+    // 🔥 FIREBASE CONFIGURATION
+    // Replace this with YOUR Firebase config from the Firebase Console
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCJfQsCUOZ9yRH1Lz-zQvxAHUdGvgWuNcE",
+  authDomain: "listahan-ec3b9.firebaseapp.com",
+  databaseURL: "https://listahan-ec3b9-default-rtdb.firebaseio.com",
+  projectId: "listahan-ec3b9",
+  storageBucket: "listahan-ec3b9.firebasestorage.app",
+  messagingSenderId: "137465366283",
+  appId: "1:137465366283:web:4651031bd7d2c00d31440e",
+  measurementId: "G-W0K1CSND2E"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+    // DOM elements
     const list = document.getElementById('dateList');
     const emojiInput = document.getElementById('emojiInput');
     const titleInput = document.getElementById('titleInput');
     const descInput = document.getElementById('descInput');
     const addBtn = document.getElementById('addBtn');
+    const statusBar = document.getElementById('statusBar');
+    const setupGuide = document.getElementById('setupGuide');
 
-    const defaultIdeas = [
-      {emoji:'🌿',title:'Eco Park Camping',desc:'Spend a night under the stars, talking about life, sharing stories, and being present with each other. Feel the peace and simplicity of nature no distractions, just us.'},
-      {emoji:'📸',title:'Photobooth Moments',desc:'Take cute and funny pictures together so we can keep them as memories something to look back on and smile about.'},
-      {emoji:'🎨',title:'Museum Date',desc:'Visit a museum sa may tabi ng highway:), appreciate art and history together. simple, calm, and meaningful.'},
-      {emoji:'🕹️',title:'Arcade Date at SFC',desc:'Play games, compete a little, and have fun like kids again full of laughter and good vibes.'},
-      {emoji:'🚶‍♀️',title:'Walking Around Agoo',desc:'Just walk anywhere no destination needed. Talk about random things, eat street food, and enjoy each other’s company.'},
-      {emoji:'🌸',title:'Baguio Trip',desc:'Lastly, our little getaway strolling around Burnham Park, sipping hot chocolate in the cold breeze, and watching the sunset together.'}
-    ];
+    let database;
+    let ideasRef;
+    let isConfigured = false;
 
-    let storedIdeas = JSON.parse(localStorage.getItem('dateIdeas')) || defaultIdeas;
-
-    function saveIdeas(){
-      localStorage.setItem('dateIdeas', JSON.stringify(storedIdeas));
+    // Check if Firebase is configured
+    function checkFirebaseConfig() {
+      if (firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
+        statusBar.className = 'status offline';
+        statusBar.innerHTML = '⚠️ Firebase not configured. Follow the setup guide above.';
+        return false;
+      }
+      return true;
     }
 
-    function renderIdeas(){
+    // Initialize Firebase
+    function initializeFirebase() {
+      if (!checkFirebaseConfig()) return;
+
+      try {
+        firebase.initializeApp(firebaseConfig);
+        database = firebase.database();
+        ideasRef = database.ref('dateIdeas');
+        isConfigured = true;
+
+        // Hide setup guide once configured
+        setupGuide.style.display = 'none';
+
+        statusBar.className = 'status online';
+        statusBar.innerHTML = '✅ Connected! Updates are now global and real-time.';
+        addBtn.disabled = false;
+
+        // Listen for real-time updates
+        setupRealtimeListener();
+
+      } catch (error) {
+        console.error('Firebase initialization error:', error);
+        statusBar.className = 'status offline';
+        statusBar.innerHTML = '❌ Connection failed. Check your Firebase config.';
+      }
+    }
+
+    // Setup real-time listener for live updates
+    function setupRealtimeListener() {
+      ideasRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const ideasArray = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+          }));
+          renderIdeas(ideasArray);
+        } else {
+          // Initialize with default ideas if database is empty
+          initializeDefaultIdeas();
+        }
+      }, (error) => {
+        console.error('Error fetching data:', error);
+        statusBar.className = 'status offline';
+        statusBar.innerHTML = '❌ Error loading data from Firebase.';
+      });
+    }
+
+    // Initialize database with default ideas
+    function initializeDefaultIdeas() {
+      const defaultIdeas = [
+        {emoji:'🌿',title:'Eco Park Camping',desc:'Spend a night under the stars, talking about life, sharing stories, and being present with each other. Feel the peace and simplicity of nature no distractions, just us.'},
+        {emoji:'📸',title:'Photobooth Moments',desc:'Take cute and funny pictures together so we can keep them as memories something to look back on and smile about.'},
+        {emoji:'🎨',title:'Museum Date',desc:'Visit a museum sa may tabi ng highway:), appreciate art and history together. simple, calm, and meaningful.'},
+        {emoji:'🕹️',title:'Arcade Date at SFC',desc:'Play games, compete a little, and have fun like kids again full of laughter and good vibes.'},
+        {emoji:'🚶‍♀️',title:'Walking Around Agoo',desc:'Just walk anywhere no destination needed. Talk about random things, eat street food, and enjoy each others company.'},
+        {emoji:'🌸',title:'Baguio Trip',desc:'Lastly, our little getaway strolling around Burnham Park, sipping hot chocolate in the cold breeze, and watching the sunset together.'}
+      ];
+
+      defaultIdeas.forEach(idea => {
+        ideasRef.push(idea);
+      });
+    }
+
+    // Render ideas to the DOM
+    function renderIdeas(ideas) {
+      if (!ideas || ideas.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(43,11,58,0.5)"><p>No ideas yet. Add the first one! 💜</p></div>';
+        return;
+      }
+
       list.innerHTML = '';
-      storedIdeas.forEach((i,index)=>{
+      ideas.forEach((idea) => {
         const item = document.createElement('article');
-        item.className='item';
+        item.className = 'item';
         item.innerHTML = `
-          <div class="emoji">${i.emoji}</div>
+          <div class="emoji">${idea.emoji}</div>
           <div class="content">
-            <h3 contenteditable="true" onblur="updateTitle(${index}, this.innerText)">${i.title}</h3>
-            <p contenteditable="true" onblur="updateDesc(${index}, this.innerText)">${i.desc}</p>
+            <h3>${idea.title}</h3>
+            <p>${idea.desc}</p>
           </div>
-          <button class="edit-btn" onclick="editIdea(${index})">Edit</button>
-          <button class="delete-btn" onclick="deleteIdea(${index})">Delete</button>`;
+          <button class="delete-btn" onclick="deleteIdea('${idea.id}')">Delete</button>
+        `;
         list.appendChild(item);
       });
     }
 
-    function editIdea(index){
-      alert('Edit directly in the title or description fields. Changes save automatically!');
-    }
-
-    function updateTitle(index, newTitle){
-      storedIdeas[index].title = newTitle.trim();
-      saveIdeas();
-    }
-
-    function updateDesc(index, newDesc){
-      storedIdeas[index].desc = newDesc.trim();
-      saveIdeas();
-    }
-
-    function deleteIdea(index){
-      if(confirm('Delete this idea?')){
-        storedIdeas.splice(index,1);
-        saveIdeas();
-        renderIdeas();
-      }
-    }
-
-    renderIdeas();
-
-    addBtn.addEventListener('click',()=>{
+    // Add new idea to Firebase
+    async function addIdea() {
       const emoji = emojiInput.value.trim() || '💗';
       const title = titleInput.value.trim();
       const desc = descInput.value.trim();
-      if(!title || !desc) return alert('Please fill in the title and description.');
-      storedIdeas.push({emoji,title,desc});
-      saveIdeas();
-      renderIdeas();
-      emojiInput.value = titleInput.value = descInput.value = '';
+
+      if (!title || !desc) {
+        alert('Please fill in the title and description.');
+        return;
+      }
+
+      try {
+        addBtn.disabled = true;
+        await ideasRef.push({
+          emoji,
+          title,
+          desc,
+          timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        // Clear inputs
+        emojiInput.value = '';
+        titleInput.value = '';
+        descInput.value = '';
+        addBtn.disabled = false;
+
+      } catch (error) {
+        console.error('Error adding idea:', error);
+        alert('Failed to add idea. Please try again.');
+        addBtn.disabled = false;
+      }
+    }
+
+    // Delete idea from Firebase
+    window.deleteIdea = async function(id) {
+      if (confirm('Delete this idea? This will remove it for everyone.')) {
+        try {
+          await ideasRef.child(id).remove();
+        } catch (error) {
+          console.error('Error deleting idea:', error);
+          alert('Failed to delete idea. Please try again.');
+        }
+      }
+    }
+
+    // Event listeners
+    addBtn.addEventListener('click', addIdea);
+
+    // Allow Enter key to submit in inputs
+    [emojiInput, titleInput, descInput].forEach(input => {
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (!addBtn.disabled) addIdea();
+        }
+      });
     });
 
-    window.addEventListener('beforeunload', saveIdeas);
+    // Initialize on page load
+    initializeFirebase();
   </script>
 </body>
 </html>
